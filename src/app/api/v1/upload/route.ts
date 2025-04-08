@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import bot from '@/lib/telegram'
-import { collection } from "@/lib/mongodb";
+import handler from '../_connect/route';
 import { Document } from 'mongodb';
 
 export async function POST(request: Request) {
@@ -10,7 +10,12 @@ export async function POST(request: Request) {
     const chatId = formData.get('chatId') as string
     const userId = formData.get('key') as string
     const caption = formData.get('caption') as string || ""
+    const mongouri = formData.get('mongouri') as string || ""
+    const collectioName = formData.get('collection') as string || ""
 
+    console.log("Mongouri: ", mongouri);
+    console.log("Collection: ", collectioName);
+    const {client, collection} = await handler(mongouri == ""?(process.env.MONGODB_URI):(mongouri), collectioName == ""?(process.env.MONGODB_COLLECTION):(collectioName));
     if (!file || !chatId || !userId) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 })
     }
@@ -42,6 +47,7 @@ export async function POST(request: Request) {
       { upsert: true }
     );
 
+    client.close();
     return NextResponse.json({ 
       message: '✅ Upload successful',
       imageInfo: {

@@ -14,7 +14,7 @@ interface GalleryItem {
   messageId: number;
   timestamp: Date;
   caption: string;
-  fileUrl: string | null; // Now this is the primary image source
+  fileUrl: string | null;
   uploadedAt: Date;
 }
 
@@ -35,31 +35,27 @@ export default function Gallery() {
   const [error, setError] = useState<string | null>(null);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [stats, setStats] = useState({ totalChats: 0, totalImages: 0 });
-  
-  // Fetch gallery data on component mount
+
   useEffect(() => {
     const storedKey = localStorage.getItem("apiKey");
-    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    console.log(`Current Date and Time: ${currentDate}`);
-    console.log(`Current User's Login: ${storedKey || 'Not available'}`);
-    
+
     const fetchGallery = async (userId: string) => {
       try {
         setLoading(true);
-        console.log(`[${currentDate}] Fetching gallery for user: ${userId}`);
         
-        const response = await fetch(`/api/v1/gallery?userId=${userId}`);
-        
+        const response = await fetch(`/api/v1/gallery`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId, mongouri: localStorage.getItem("mongouri") || "", collectionName: localStorage.getItem("mongocollection") || "" }),
+        });
+
         if (!response.ok) {
           throw new Error(`Failed to fetch gallery: ${response.statusText}`);
         }
-        
+
         const data: GalleryResponse = await response.json();
-        console.log(`[${currentDate}] Gallery data received:`, {
-          totalChats: data.totalChats,
-          totalImages: data.totalImages,
-          chatIds: Object.keys(data.galleryData)
-        });
         
         if (data.galleryData && Object.keys(data.galleryData).length > 0) {
           setGalleryData(data.galleryData);
@@ -74,7 +70,6 @@ export default function Gallery() {
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error fetching gallery');
-        console.error(`[${currentDate}] Error fetching gallery:`, err);
       } finally {
         setLoading(false);
       }
@@ -105,11 +100,9 @@ export default function Gallery() {
     setActiveChat(chatId);
   };
   
-  // Handle image loading errors
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement;
     target.src = "https://placehold.co/400x300?text=Image+Not+Available";
-    console.error("Failed to load image");
   };
 
   return (
@@ -156,7 +149,6 @@ export default function Gallery() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Chat selector buttons */}
               <div className="bg-gray-100 p-3 rounded-lg overflow-x-auto whitespace-nowrap">
                 {Object.keys(galleryData).map((chatId) => (
                   <button
@@ -173,7 +165,6 @@ export default function Gallery() {
                 ))}
               </div>
               
-              {/* Images grid */}
               {activeChat && galleryData[activeChat] && galleryData[activeChat].length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
                   {galleryData[activeChat].map((image) => (
@@ -181,10 +172,8 @@ export default function Gallery() {
                       key={image.messageId}
                       className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                     >
-                      {/* Image container with aspect ratio */}
                       <div className="aspect-square bg-gray-100 relative">
                         {image.fileUrl ? (
-                          // Direct fileUrl from API
                           <Image
                             src={image.fileUrl}
                             alt={image.caption || `Image ${image.messageId}`}
@@ -196,7 +185,6 @@ export default function Gallery() {
                             loading="lazy"
                           />
                         ) : (
-                          // Placeholder for missing fileUrl
                           <div className="h-full w-full flex items-center justify-center text-center p-4 text-gray-400">
                             Image not available
                           </div>

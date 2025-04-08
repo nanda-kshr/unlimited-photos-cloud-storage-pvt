@@ -12,18 +12,25 @@ import {
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle } from "lucide-react";
 
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
   const [loading,setLoading] = useState(true);
   const [apiKey, setApiKey] = useState<string>("");
+  const [mongouri, setMongoUri] = useState<string>("");
+  const [collection, setCollection] = useState<string>("");
   const [chatId, setChatId] = useState<string>("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const storedKey = localStorage.getItem("apiKey");
       if (storedKey) {
       setApiKey(storedKey);
+      setMongoUri(localStorage.getItem("mongouri") || "");
+      setCollection(localStorage.getItem("mongocollection") || "");
       setChatId(localStorage.getItem("chatId") || "");
     } else {
       console.log("API Key is missing. Please ensure you are logged in.");
@@ -49,6 +56,7 @@ export default function Home() {
       return
     }
     setLoading(true);
+    setShowSuccess(false);
 
     if (!apiKey) {
       Router.push(`/`);
@@ -59,6 +67,8 @@ export default function Home() {
     formData.append('image', file)
     formData.append('chatId', chatId.toString())
     formData.append('key', apiKey.toString())
+    formData.append('mongouri', mongouri.toString())
+    formData.append('collection', collection.toString())
 
     try {
       const response = await fetch('/api/v1/upload', {
@@ -66,6 +76,11 @@ export default function Home() {
         body: formData,
       })
 
+      setShowSuccess(true);
+      setFile(null);
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 5000);
       await response.json()
     } catch (error) {
       console.error('❌ Upload failed:', error)
@@ -82,6 +97,15 @@ export default function Home() {
           <CardDescription>This is an unlimited private storage for your images</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+        {showSuccess && (
+            <Alert className="bg-green-50 border-green-500 text-green-700 mb-4">
+              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+              <AlertTitle>Success!</AlertTitle>
+              <AlertDescription>
+                Your file has been successfully uploaded to Telegram.
+              </AlertDescription>
+            </Alert>
+          )}
           <label
             className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors"
             onDrop={(e) => {
