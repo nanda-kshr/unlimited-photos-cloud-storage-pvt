@@ -103,6 +103,7 @@ export async function POST(request: Request) {
               uploadedAt: item.uploadedAt,
             };
           } catch (error) {
+            console.log(apiKey);
             console.error('Error fetching file URL:', error);
             return {
               messageId: item.messageId,
