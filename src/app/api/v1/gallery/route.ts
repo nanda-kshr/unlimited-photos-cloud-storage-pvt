@@ -91,9 +91,11 @@ export async function POST(request: Request) {
         images.map(async (item: GalleryItem): Promise<EnhancedGalleryItem> => {
           try {
             const fileInfo = await bot.getFile(item.fileId);
+            console.log('File Info:', fileInfo);
             const fileUrl = fileInfo.file_path
               ? `https://api.telegram.org/file/bot${apiKey}/${fileInfo.file_path}`
               : null;
+              console.log('File Url:', fileUrl);
 
             return {
               messageId: item.messageId,
