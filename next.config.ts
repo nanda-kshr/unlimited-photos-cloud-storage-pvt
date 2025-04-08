@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     
     return config;
   },
+  images: {
+    domains: ['api.telegram.org'],
+  },
 };
 
 export default nextConfig;
