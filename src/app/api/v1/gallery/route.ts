@@ -27,6 +27,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { apiKey, userId, chatId, mongouri, collectionName } = body;
 
+
+
     const mongoUri = mongouri || process.env.MONGODB_URI;
     const collectionNm = collectionName || process.env.MONGODB_COLLECTION;
 

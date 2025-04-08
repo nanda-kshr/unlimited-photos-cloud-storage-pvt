@@ -47,7 +47,7 @@ export default function Gallery() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ api: localStorage.getItem("apiKey"), userId, mongouri: localStorage.getItem("mongouri") || "", collectionName: localStorage.getItem("mongocollection") || "" }),
+          body: JSON.stringify({ apiKey: localStorage.getItem("apiKey"), userId, mongouri: localStorage.getItem("mongouri") || "", collectionName: localStorage.getItem("mongocollection") || "" }),
         });
 
         if (!response.ok) {
