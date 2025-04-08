@@ -18,15 +18,11 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     
-    // Send to Telegram
     const chatDetails = await bot.sendPhoto(chatId, buffer, { caption })
     const messageId = chatDetails.message_id
     const fileId = chatDetails.photo?.[chatDetails.photo.length - 1]?.file_id || ""
-    
-    // Current timestamp
     const timestamp = new Date()
     
-    // Define update operations with proper types
     const updateDoc: Document = {
       $push: {
         [`galleries.${chatId}`]: {
@@ -40,7 +36,6 @@ export async function POST(request: Request) {
       $set: { lastUpdated: timestamp }
     };
 
-    // Update MongoDB
     await collection.updateOne(
       { userId },
       updateDoc,

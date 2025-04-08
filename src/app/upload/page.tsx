@@ -10,18 +10,21 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
-  const chatId = -1002421310208
   const [loading,setLoading] = useState(true);
   const [apiKey, setApiKey] = useState<string>("");
+  const [chatId, setChatId] = useState<string>("");
 
   useEffect(() => {
     const storedKey = localStorage.getItem("apiKey");
       if (storedKey) {
       setApiKey(storedKey);
+      setChatId(localStorage.getItem("chatId") || "");
     } else {
       console.log("API Key is missing. Please ensure you are logged in.");
     }
@@ -33,6 +36,11 @@ export default function Home() {
     if (selectedFile) {
       setFile(selectedFile)
     }
+  }
+
+  const handleChatId = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setChatId(event.target.value);
+    localStorage.setItem("chatId", event.target.value);
   }
 
   const handleUpload = async () => {
@@ -100,7 +108,17 @@ export default function Home() {
               onChange={handleFileChange}
               id="file-upload"
             />
+            
           </label>
+          <Label>
+            Enter your ChatID
+          </Label>
+          <Input 
+            placeholder="Eg: -1001233434890" 
+            className="mb-4" 
+            value={chatId}
+            onChange={(e) => handleChatId(e)}
+          />
           <Button
             className="w-full mt-6"
             onClick={handleUpload}

@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -19,13 +20,17 @@ export default  function  Home() {
 
   useEffect(() => {
     const gettoken = async() => {
-      const token = await fetch(`/api/v1/token`).then(res => res.json().then(data => data.token))
+      const res = await fetch(`/api/v1/token`).then(res => res.json())
+      const token = res.token;
+      const chat = res.chat;
       setShowApi(token)
       localStorage.setItem("apiKey", token);
+      localStorage.setItem("chatId", chat);
     }
     gettoken();
     setLoading(false);
   },[])
+
   const handleApiKey = async(e: ChangeEvent<HTMLInputElement>) => {
     setShowApi(e.target.value);
     localStorage.setItem("apiKey", e.target.value);
@@ -40,6 +45,7 @@ export default  function  Home() {
       <Card className="w-full max-w-xl mx-auto">
         <CardHeader>
           <CardTitle>Enter Your API-KEY</CardTitle>
+          <CardDescription></CardDescription>
         </CardHeader>
         <CardContent>
           <Input 
