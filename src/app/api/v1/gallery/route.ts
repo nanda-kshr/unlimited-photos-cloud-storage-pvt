@@ -28,7 +28,6 @@ export async function POST(request: Request) {
     const { apiKey, userId, chatId, mongouri, collectionName } = body;
 
 
-
     const mongoUri = mongouri || process.env.MONGODB_URI;
     const collectionNm = collectionName || process.env.MONGODB_COLLECTION;
 
@@ -93,7 +92,7 @@ export async function POST(request: Request) {
           try {
             const fileInfo = await bot.getFile(item.fileId);
             const fileUrl = fileInfo.file_path
-              ? `https://api.telegram.org/file/bot${apiKey==""?process.env.BOT_TOKEN:apiKey}/${fileInfo.file_path}`
+              ? `https://api.telegram.org/file/bot${apiKey}/${fileInfo.file_path}`
               : null;
 
             return {
