@@ -38,7 +38,7 @@ export default function Home() {
   const handleApiKey = (e: ChangeEvent<HTMLInputElement>) => {
     setShowApi(e.target.value);
     localStorage.setItem("apiKey", e.target.value);
-    if (e.target.value.trim()) {
+    if (e.target.value) {
       setError("");
     }
   };
@@ -54,7 +54,7 @@ export default function Home() {
   };
 
   const handleLogin = () => {
-    if (!showApi.trim()) {
+    if (!showApi) {
       setError("API Key is required.");
       return;
     }
@@ -165,7 +165,7 @@ export default function Home() {
           <Button
             className="w-2/6 max-w-xl mx-auto"
             onClick={handleLogin}
-            disabled={!showApi.trim()}
+            disabled={!showApi}
           >
             Login
           </Button>
