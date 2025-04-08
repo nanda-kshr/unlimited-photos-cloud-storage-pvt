@@ -35,10 +35,9 @@ export default function Gallery() {
   const [error, setError] = useState<string | null>(null);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [stats, setStats] = useState({ totalChats: 0, totalImages: 0 });
-
   useEffect(() => {
     const storedKey = localStorage.getItem("apiKey");
-
+    
     const fetchGallery = async (userId: string) => {
       try {
         setLoading(true);
@@ -48,7 +47,7 @@ export default function Gallery() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ userId, mongouri: localStorage.getItem("mongouri") || "", collectionName: localStorage.getItem("mongocollection") || "" }),
+          body: JSON.stringify({ api: localStorage.getItem("apiKey"), userId, mongouri: localStorage.getItem("mongouri") || "", collectionName: localStorage.getItem("mongocollection") || "" }),
         });
 
         if (!response.ok) {
