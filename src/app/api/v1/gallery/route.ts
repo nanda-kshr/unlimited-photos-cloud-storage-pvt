@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     const enhancedGalleryData: GalleryData = {};
-    console.log('gallery data Info:', enhancedGalleryData);
+    console.log('gallery data Info:', galleryData);
 
     for (const [chatId, images] of Object.entries(galleryData)) {
       enhancedGalleryData[chatId] = await Promise.all(
