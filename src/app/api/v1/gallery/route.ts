@@ -26,10 +26,10 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { apiKey, userId, chatId, mongouri, collectionName } = body;
-
     const bot = createBot(apiKey);
     const mongoUri = mongouri || process.env.MONGODB_URI;
     const collectionNm = collectionName || process.env.MONGODB_COLLECTION;
+    console.log(body)
 
     if (!mongoUri || !collectionNm) {
       return NextResponse.json(
@@ -85,19 +85,19 @@ export async function POST(request: Request) {
     }
 
     const enhancedGalleryData: GalleryData = {};
-    console.log('gallery data Info:', galleryData);
+
 
     for (const [chatId, images] of Object.entries(galleryData)) {
       enhancedGalleryData[chatId] = await Promise.all(
         images.map(async (item: GalleryItem): Promise<EnhancedGalleryItem> => {
           try {
-            console.log('item Info:', item);
+
             const fileInfo = await bot.getFile(item.fileId);
-            console.log('File Info:', fileInfo);
+
             const fileUrl = fileInfo.file_path
               ? `https://api.telegram.org/file/bot${apiKey}/${fileInfo.file_path}`
               : null;
-              console.log('File Url:', fileUrl);
+
 
             return {
               messageId: item.messageId,
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
               uploadedAt: item.uploadedAt,
             };
           } catch (error) {
-            console.log(apiKey);
+
             console.error('Error fetching file URL:', error);
             return {
               messageId: item.messageId,
@@ -128,6 +128,7 @@ export async function POST(request: Request) {
     );
 
     client.close();
+
     return NextResponse.json({
       userId,
       galleryData: enhancedGalleryData,
@@ -141,5 +142,7 @@ export async function POST(request: Request) {
       { message: 'Failed to retrieve gallery', error: errorMessage },
       { status: 500 }
     );
+  }
+  finally{
   }
 }
