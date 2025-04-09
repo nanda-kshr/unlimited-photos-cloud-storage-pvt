@@ -75,6 +75,7 @@ export default function Home() {
             <CardTitle>Enter Your Credentials</CardTitle>
             <CardDescription>
               Your credentials are securely stored in your local storage and are not shared externally.
+              For more help :- got go to <span><a className="text-blue-500" href='https://github.com/nanda-kshr/unlimited-photos-cloud-storage'>Github</a></span>
             </CardDescription>
           </CardHeader>
           <CardContent>
