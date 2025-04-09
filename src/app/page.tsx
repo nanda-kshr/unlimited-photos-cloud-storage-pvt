@@ -27,14 +27,18 @@ export default function Home() {
       const res = await fetch(`/api/v1/token`).then(res => res.json());
       const token = res.token;
       const chat = res.chat;
-      setShowApi(token);
-      localStorage.setItem("apiKey", token);
-      localStorage.setItem("chatId", chat);
+      if (token != ""){
+        setShowApi(token);
+        localStorage.setItem("apiKey", token);
+        localStorage.setItem("chatId", chat);
+      }else{
+        setShowApi(localStorage.getItem("apiKey") || "");
+        localStorage.setItem("chatId", chat);
+      }
     };
     gettoken();
     setLoading(false);
   }, []);
-
   const handleApiKey = (e: ChangeEvent<HTMLInputElement>) => {
     setShowApi(e.target.value);
     localStorage.setItem("apiKey", e.target.value);
