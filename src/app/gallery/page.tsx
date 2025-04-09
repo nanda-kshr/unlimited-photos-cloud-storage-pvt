@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
 import {
   Card,
@@ -16,6 +16,8 @@ interface GalleryItem {
   caption: string;
   fileUrl: string | null;
   uploadedAt: Date;
+  placeholderFileId?: string;
+  placeholderFileUrl?: string | null;
 }
 
 interface GalleryData {
@@ -30,24 +32,35 @@ interface GalleryResponse {
 }
 
 export default function Gallery() {
-  const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
   const [galleryData, setGalleryData] = useState<GalleryData>({});
   const [error, setError] = useState<string | null>(null);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [stats, setStats] = useState({ totalChats: 0, totalImages: 0 });
+  const [visibleImages, setVisibleImages] = useState<Set<number>>(new Set());
+  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
+  const [isOriginalLoading, setIsOriginalLoading] = useState(false);
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
   useEffect(() => {
     const storedKey = localStorage.getItem("apiKey");
     
     const fetchGallery = async (userId: string) => {
       try {
-        setLoading(true);
+        setIsFetching(true);
         
         const response = await fetch(`/api/v1/gallery`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ apiKey: localStorage.getItem("apiKey"), userId, mongouri: localStorage.getItem("mongouri") || "", collectionName: localStorage.getItem("mongocollection") || "" }),
+          body: JSON.stringify({ 
+            apiKey: localStorage.getItem("apiKey"), 
+            userId, 
+            mongouri: localStorage.getItem("mongouri") || "", 
+            collectionName: localStorage.getItem("mongocollection") || "" 
+          }),
         });
 
         if (!response.ok) {
@@ -70,7 +83,7 @@ export default function Gallery() {
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error fetching gallery');
       } finally {
-        setLoading(false);
+        setIsFetching(false);
       }
     };
     
@@ -78,9 +91,48 @@ export default function Gallery() {
       fetchGallery(storedKey);
     } else {
       setError("API Key is missing. Please ensure you are logged in.");
-      setLoading(false);
+      setIsFetching(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!activeChat || !galleryData[activeChat]) return;
+
+    // Cleanup previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    // Setup IntersectionObserver
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const messageId = parseInt(entry.target.getAttribute('data-message-id') || '0');
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              setVisibleImages(prev => {
+                const newSet = new Set(prev);
+                if (!newSet.has(messageId)) {
+                  newSet.add(messageId);
+                }
+                return newSet;
+              });
+            }, 1000); // 1-second delay for each image
+          }
+        });
+      },
+      { threshold: 0.1 } // Trigger when 10% of the element is visible
+    );
+
+    // Observe all cards
+    cardRefs.current.forEach((card) => {
+      if (card) observerRef.current?.observe(card);
+    });
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [activeChat, galleryData]);
 
   const formatDate = (dateString: string | Date) => {
     const date = new Date(dateString);
@@ -97,11 +149,35 @@ export default function Gallery() {
 
   const handleChatChange = (chatId: string) => {
     setActiveChat(chatId);
+    setVisibleImages(new Set());
+    setSelectedImage(null);
   };
-  
+
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement;
     target.src = "https://placehold.co/400x300?text=Image+Not+Available";
+  };
+
+  const handleImageClick = (image: GalleryItem) => {
+    setSelectedImage(image);
+    setIsOriginalLoading(true);
+  };
+
+  const handleOriginalLoad = () => {
+    setIsOriginalLoading(false);
+  };
+
+  const closePopup = () => {
+    setSelectedImage(null);
+    setIsOriginalLoading(false);
+  };
+
+  const setCardRef = (messageId: number, element: HTMLDivElement | null) => {
+    if (element) {
+      cardRefs.current.set(messageId, element);
+    } else {
+      cardRefs.current.delete(messageId);
+    }
   };
 
   return (
@@ -119,7 +195,7 @@ export default function Gallery() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isFetching && Object.keys(galleryData).length === 0 ? (
             <div className="flex justify-center items-center h-64">
               <svg
                 aria-hidden="true"
@@ -169,20 +245,47 @@ export default function Gallery() {
                   {galleryData[activeChat].map((image) => (
                     <div
                       key={image.messageId}
-                      className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                      ref={(el) => setCardRef(image.messageId, el)}
+                      data-message-id={image.messageId}
+                      className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow animate-fade-in cursor-pointer"
+                      onClick={() => handleImageClick(image)}
                     >
                       <div className="aspect-square bg-gray-100 relative">
                         {image.fileUrl ? (
-                          <Image
-                            src={image.fileUrl}
-                            alt={image.caption || `Image ${image.messageId}`}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                            onError={handleImageError}
-                            unoptimized
-                            loading="lazy"
-                          />
+                          visibleImages.has(image.messageId) ? (
+                            <Image
+                              src={image.placeholderFileUrl || image.fileUrl}
+                              alt={image.caption || `Image ${image.messageId}`}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                              onError={handleImageError}
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-gray-200">
+                              <svg
+                                className="w-8 h-8 text-gray-400 animate-spin"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
+                                />
+                              </svg>
+                            </div>
+                          )
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-center p-4 text-gray-400">
                             Image not available
@@ -212,6 +315,68 @@ export default function Gallery() {
           )}
         </CardContent>
       </Card>
+
+      {/* Popup for original image */}
+      {selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full p-4">
+            <button
+              onClick={closePopup}
+              className="absolute top-2 right-2 bg-white rounded-full p-2 text-black hover:bg-gray-200 focus:outline-none"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            {isOriginalLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-200 bg-opacity-50">
+                <svg
+                  className="w-12 h-12 text-gray-400 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
+                  />
+                </svg>
+              </div>
+            )}
+            <Image
+              src={selectedImage.fileUrl || "https://placehold.co/400x300?text=Image+Not+Available"}
+              alt={selectedImage.caption || `Image ${selectedImage.messageId}`}
+              width={0}
+              height={0}
+              sizes="100vw"
+              className="w-full h-full object-contain"
+              onError={handleImageError}
+              onLoad={handleOriginalLoad}
+              unoptimized
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -22,13 +22,15 @@ import {
 } from "@/components/ui/tooltip";
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null)
-  const [loading, setLoading] = useState(true);
+  const [files, setFiles] = useState<File[]>([]) // Changed to array
+  const [loading, setLoading] = useState(false); // Changed initial state to false
   const [apiKey, setApiKey] = useState<string>("");
   const [mongouri, setMongoUri] = useState<string>("");
   const [collection, setCollection] = useState<string>("");
   const [chatId, setChatId] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [keepCompressed, setKeepCompressed] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const storedKey = localStorage.getItem("apiKey");
@@ -37,16 +39,16 @@ export default function Home() {
       setMongoUri(localStorage.getItem("mongouri") || "");
       setCollection(localStorage.getItem("mongocollection") || "");
       setChatId(localStorage.getItem("chatId") || "");
-    } else {
-      console.log("API Key is missing. Please ensure you are logged in.");
-    }
+    } 
     setLoading(false);
   }, []);
+
   const Router = useRouter();
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0]
-    if (selectedFile) {
-      setFile(selectedFile)
+    const selectedFiles = event.target.files;
+    if (selectedFiles) {
+      setFiles(Array.from(selectedFiles)); // Convert FileList to Array
     }
   }
 
@@ -56,8 +58,8 @@ export default function Home() {
   }
 
   const handleUpload = async () => {
-    if (!file) {
-      alert("Please select a file first.")
+    if (files.length === 0) {
+      alert("Please select at least one file first.")
       return
     }
     setLoading(true);
@@ -68,27 +70,44 @@ export default function Home() {
       setLoading(false);
       return;
     }
-    const formData = new FormData()
-    formData.append('image', file)
-    formData.append('chatId', chatId.toString())
-    formData.append('key', apiKey.toString())
-    formData.append('mongouri', mongouri.toString())
-    formData.append('collection', collection.toString())
 
     try {
-      const response = await fetch('/api/v1/upload', {
-        method: 'POST',
-        body: formData,
-      })
+      // Upload files sequentially
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('chatId', chatId.toString());
+        formData.append('key', apiKey.toString());
+        formData.append('mongouri', mongouri.toString());
+        formData.append('collection', collection.toString());
+        formData.append('compress', keepCompressed.toString());
+
+        const response = await fetch('/api/v1/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.status === 429) {
+          setError('Too many uploads');
+          throw new Error('Too many uploads');
+        }
+
+        if (!response.ok) {
+          throw new Error(`Upload failed for ${file.name}: ${response.statusText}`);
+        }
+
+        await response.json();
+      }
 
       setShowSuccess(true);
-      setFile(null);
+      setFiles([]); 
       setTimeout(() => {
         setShowSuccess(false);
       }, 5000);
-      await response.json()
     } catch (error) {
-      console.error('❌ Upload failed:', error)
+      
+      console.error('Upload failed:', error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -98,8 +117,9 @@ export default function Home() {
     <div className="flex items-center justify-center min-h-screen">
       <Card className="w-full max-w-xl mx-auto">
         <CardHeader>
-          <CardTitle>Upload A Picture</CardTitle>
-          <CardDescription>This is an unlimited private storage for your images</CardDescription>
+          <CardTitle>Upload Pictures</CardTitle>
+          <CardDescription>This is an unlimited private storage for your images.</CardDescription>
+          <CardDescription>Dont upload more than 10 Images at a time </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {showSuccess && (
@@ -107,7 +127,16 @@ export default function Home() {
               <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
               <AlertTitle>Success!</AlertTitle>
               <AlertDescription>
-                Your file has been successfully uploaded to Telegram.
+                Your files have been successfully uploaded to Telegram.
+              </AlertDescription>
+            </Alert>
+          )}
+          {error && (
+            <Alert className="bg-red-50 border-red-500 text-red-700 mb-4">
+              <CheckCircle className="h-4 w-4 text-red-500 mr-2" />
+              <AlertTitle>Error!</AlertTitle>
+              <AlertDescription>
+                {error}
               </AlertDescription>
             </Alert>
           )}
@@ -115,20 +144,27 @@ export default function Home() {
             className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors"
             onDrop={(e) => {
               e.preventDefault();
-              const droppedFile = e.dataTransfer.files?.[0];
-              if (droppedFile) {
-                setFile(droppedFile);
+              const droppedFiles = e.dataTransfer.files;
+              if (droppedFiles) {
+                setFiles(Array.from(droppedFiles));
               }
             }}
             onDragOver={(e) => e.preventDefault()}
           >
-            {file ? (
-              <p className="text-center text-gray-600">
-                Selected File: <span className="font-medium">{file.name}</span>
-              </p>
+            {files.length > 0 ? (
+              <div className="text-center text-gray-600 max-h-40 overflow-y-auto">
+                <p>Selected Files:</p>
+                <ul className="list-disc list-inside">
+                  {files.map((file, index) => (
+                    <li key={index} className="font-medium truncate" title={file.name}>
+                      {file.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : (
               <p className="text-center text-gray-500">
-                Drag and drop a file here, or click to select one
+                Drag and drop files here, or click to select multiple files
               </p>
             )}
             <input
@@ -136,8 +172,8 @@ export default function Home() {
               className="hidden"
               onChange={handleFileChange}
               id="file-upload"
+              multiple // Added multiple attribute
             />
-            
           </label>
           <div className="flex items-center gap-2">
             <Label htmlFor="chat-id">
@@ -163,7 +199,7 @@ export default function Home() {
                       Disclaimer: You should add the bot to the channel as admin and allow all permissions.
                     </p>
                     <p className="text-xs text-black-500 mt-2 font-medium">
-                      For more help :- got go to <span><a className="text-blue-500" href='https://github.com/nanda-kshr/unlimited-photos-cloud-storage'>Github</a></span>
+                      For more help :- go to <span><a className="text-blue-500" href='https://github.com/nanda-kshr/unlimited-photos-cloud-storage'>Github</a></span>
                     </p>
                   </div>
                 </TooltipContent>
@@ -177,6 +213,17 @@ export default function Home() {
             value={chatId}
             onChange={(e) => handleChatId(e)}
           />
+          <label className="inline-flex items-center cursor-pointer">
+            <Input 
+              type="checkbox" 
+              value="" 
+              className="sr-only peer" 
+              onChange={(e) => setKeepCompressed(e.target.checked)} 
+              checked
+            />
+            <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+            <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Need Thumbnail Optimization?</span>
+          </label>
           <Button
             className="w-full mt-6"
             onClick={handleUpload}
@@ -208,3 +255,4 @@ export default function Home() {
     </div>
   )
 }
+

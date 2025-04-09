@@ -8,6 +8,7 @@ interface GalleryItem {
   caption?: string;
   fileId: string;
   uploadedAt: Date | string;
+  placeholder?: string; // Added optional placeholder field
 }
 
 interface EnhancedGalleryItem {
@@ -16,6 +17,8 @@ interface EnhancedGalleryItem {
   caption: string;
   fileUrl: string | null;
   uploadedAt: Date | string;
+  placeholderFileId?: string; // Added optional placeholder file ID
+  placeholderFileUrl?: string | null; // Added optional placeholder file URL
 }
 
 interface GalleryData {
@@ -29,7 +32,6 @@ export async function POST(request: Request) {
     const bot = createBot(apiKey);
     const mongoUri = mongouri || process.env.MONGODB_URI;
     const collectionNm = collectionName || process.env.MONGODB_COLLECTION;
-    console.log(body)
 
     if (!mongoUri || !collectionNm) {
       return NextResponse.json(
@@ -86,18 +88,24 @@ export async function POST(request: Request) {
 
     const enhancedGalleryData: GalleryData = {};
 
-
     for (const [chatId, images] of Object.entries(galleryData)) {
       enhancedGalleryData[chatId] = await Promise.all(
         images.map(async (item: GalleryItem): Promise<EnhancedGalleryItem> => {
           try {
-
+            // Get original file URL
             const fileInfo = await bot.getFile(item.fileId);
-
             const fileUrl = fileInfo.file_path
               ? `https://api.telegram.org/file/bot${apiKey}/${fileInfo.file_path}`
               : null;
 
+            // Get placeholder file URL if placeholder exists
+            let placeholderFileUrl: string | null = null;
+            if (item.placeholder) {
+              const placeholderFileInfo = await bot.getFile(item.placeholder);
+              placeholderFileUrl = placeholderFileInfo.file_path
+                ? `https://api.telegram.org/file/bot${apiKey}/${placeholderFileInfo.file_path}`
+                : null;
+            }
 
             return {
               messageId: item.messageId,
@@ -105,9 +113,12 @@ export async function POST(request: Request) {
               caption: item.caption || '',
               fileUrl: fileUrl,
               uploadedAt: item.uploadedAt,
+              ...(item.placeholder && { 
+                placeholderFileId: item.placeholder,
+                placeholderFileUrl: placeholderFileUrl 
+              }) // Conditionally add placeholder fields
             };
           } catch (error) {
-
             console.error('Error fetching file URL:', error);
             return {
               messageId: item.messageId,
@@ -115,6 +126,10 @@ export async function POST(request: Request) {
               caption: item.caption || '',
               fileUrl: null,
               uploadedAt: item.uploadedAt,
+              ...(item.placeholder && { 
+                placeholderFileId: item.placeholder,
+                placeholderFileUrl: null 
+              }) // Include placeholderFileId even if URL fetch fails
             };
           }
         })
@@ -142,7 +157,5 @@ export async function POST(request: Request) {
       { message: 'Failed to retrieve gallery', error: errorMessage },
       { status: 500 }
     );
-  }
-  finally{
   }
 }
