@@ -85,11 +85,13 @@ export async function POST(request: Request) {
     }
 
     const enhancedGalleryData: GalleryData = {};
+    console.log('gallery data Info:', enhancedGalleryData);
 
     for (const [chatId, images] of Object.entries(galleryData)) {
       enhancedGalleryData[chatId] = await Promise.all(
         images.map(async (item: GalleryItem): Promise<EnhancedGalleryItem> => {
           try {
+            console.log('item Info:', item);
             const fileInfo = await bot.getFile(item.fileId);
             console.log('File Info:', fileInfo);
             const fileUrl = fileInfo.file_path
