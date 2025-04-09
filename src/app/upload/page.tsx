@@ -148,7 +148,7 @@ export default function Home() {
                 <TooltipTrigger>
                   <HelpCircle className="h-4 w-4 text-gray-500" />
                 </TooltipTrigger>
-                <TooltipContent className="w-80 p-3 bg-white shadow-lg rounded-md border">
+                <TooltipContent className="w-80 p-3 bg-white shadow-lg rounded-md border text-black">
                   <div className="space-y-2">
                     <p className="font-semibold">How to get your Chat ID:</p>
                     <ol className="text-sm list-decimal ml-4 space-y-1">
@@ -161,7 +161,9 @@ export default function Home() {
                     </ol>
                     <p className="text-xs text-red-500 mt-2 font-medium">
                       Disclaimer: You should add the bot to the channel as admin and allow all permissions.
-                      For more help :- got go to <a href='https://github.com/nanda-kshr/unlimited-photos-cloud-storage'>Github</a>
+                    </p>
+                    <p className="text-xs text-black-500 mt-2 font-medium">
+                      For more help :- got go to <span><a className="text-blue-500" href='https://github.com/nanda-kshr/unlimited-photos-cloud-storage'>Github</a></span>
                     </p>
                   </div>
                 </TooltipContent>
