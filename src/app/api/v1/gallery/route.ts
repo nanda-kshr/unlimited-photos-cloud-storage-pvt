@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import handler from '../_connect/route';
-import bot from '@/lib/telegram';
+import createBot from '@/lib/telegram';
 
 interface GalleryItem {
   messageId: number;
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { apiKey, userId, chatId, mongouri, collectionName } = body;
 
-
+    const bot = createBot(apiKey);
     const mongoUri = mongouri || process.env.MONGODB_URI;
     const collectionNm = collectionName || process.env.MONGODB_COLLECTION;
 

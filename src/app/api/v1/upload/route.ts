@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import bot from '@/lib/telegram'
+import createBot from '@/lib/telegram'
 import handler from '../_connect/route';
 import { Document } from 'mongodb';
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    
+    const bot = createBot(userId);
     const chatDetails = await bot.sendPhoto(chatId, buffer, { caption })
     const messageId = chatDetails.message_id
     const fileId = chatDetails.photo?.[chatDetails.photo.length - 1]?.file_id || ""
