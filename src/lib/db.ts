@@ -11,5 +11,5 @@ export const getDbClient = async (mongouri: string): Promise<MongoClient> => {
 };
 
 export const getCollection = (client: MongoClient, collectionName: string): Collection => {
-  return client.db().collection(collectionName);
+  return client.db(collectionName).collection(collectionName);
 };

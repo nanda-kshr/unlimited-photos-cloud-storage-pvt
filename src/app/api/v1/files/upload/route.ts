@@ -6,7 +6,7 @@ import { getDbClient, getCollection } from '@/lib/db';
 import { getSession, setSession, updateSessionTimestamp } from '@/lib/session';
 import { config } from '@/lib/config';
 import sharp from 'sharp';
-import { MongoClient} from 'mongodb';
+import { MongoClient, Document} from 'mongodb';
 
 interface GalleryItem {
   messageId: number;
@@ -122,6 +122,7 @@ export async function POST(request: Request) {
       const galleryItem: GalleryItem = { messageId, timestamp, fileId, uploadedAt: timestamp, ...(placeholderFileId && { placeholder: placeholderFileId }) };
       galleryItems.push(galleryItem);
 
+
       uploadedImages.push({
         messageId,
         chatId,
@@ -129,14 +130,15 @@ export async function POST(request: Request) {
         ...(placeholderFileId && { placeholder: placeholderFileId }),
       });
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateDoc: any = {
-        $push: { [`galleries.${chatId}`]: { $each: galleryItems } },
-        $set: { lastUpdated: timestamp },
-        };
-      
-    await collection.updateOne({ apiKey }, updateDoc, { upsert: true });
     
+
+    const updateDoc: Document = {
+          $push: {
+            [`galleries.${chatId}`]: { $each: galleryItems }
+          },
+          $set: { lastUpdated: timestamp }
+        };
+    await collection.updateOne({ apiKey }, updateDoc, { upsert: true });
     return NextResponse.json({ message: 'Upload successful', fileIds: fileIds });
   } catch (error) {
     console.error('Error handling upload:', error);
