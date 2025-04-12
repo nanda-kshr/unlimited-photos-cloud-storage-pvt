@@ -50,7 +50,7 @@ export default function Gallery() {
       try {
         setIsFetching(true);
         
-        const response = await fetch(`/api/v1/gallery`, {
+        const response = await fetch(`/api/v1/inweb/gallery`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -1,6 +1,8 @@
+//api/v1/inweb/upload/route.ts
+
 import { NextResponse } from 'next/server'
-import createBot from '@/lib/telegram'
-import handler from '../_connect/route';
+import {createBot} from '@/lib/telegram'
+import handler from '../../_connect/route';
 import { Document } from 'mongodb';
 import sharp from 'sharp';
 

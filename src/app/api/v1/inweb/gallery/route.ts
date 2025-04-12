@@ -1,6 +1,8 @@
+//api/v1/inweb/gallery/route.ts
+
 import { NextResponse } from 'next/server';
-import handler from '../_connect/route';
-import createBot from '@/lib/telegram';
+import handler from '../../_connect/route';
+import {createBot} from '@/lib/telegram';
 
 interface GalleryItem {
   messageId: number;

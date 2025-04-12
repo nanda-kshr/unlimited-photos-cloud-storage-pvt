@@ -11,6 +11,22 @@ export function Navbar() {
                 </div>
                 <nav className="space-x-4">
                     <Link
+                        href="https://buymeacoffee.com/nanda_kshr"
+                        className={cn(
+                            "text-sm font-medium text-gray-700 hover:text-gray-900"
+                        )}
+                    >
+                        Buy Me a Coffee
+                    </Link>
+                    <Link
+                        href="/docs"
+                        className={cn(
+                            "text-sm font-medium text-gray-700 hover:text-gray-900"
+                        )}
+                    >
+                        Api Docs
+                    </Link>
+                    <Link
                         href="/gallery"
                         className={cn(
                             "text-sm font-medium text-gray-700 hover:text-gray-900"

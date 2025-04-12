@@ -82,7 +82,7 @@ export default function Home() {
         formData.append('collection', collection.toString());
         formData.append('compress', keepCompressed.toString());
 
-        const response = await fetch('/api/v1/upload', {
+        const response = await fetch('/api/v1/inweb/upload', {
           method: 'POST',
           body: formData,
         });

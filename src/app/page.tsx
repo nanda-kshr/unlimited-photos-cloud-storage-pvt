@@ -24,7 +24,7 @@ export default function Home() {
 
   useEffect(() => {
     const gettoken = async () => {
-      const res = await fetch(`/api/v1/token`).then(res => res.json());
+      const res = await fetch(`/api/v1/inweb/token`).then(res => res.json());
       const token = res.token;
       const chat = res.chat;
       if (token != ""){
