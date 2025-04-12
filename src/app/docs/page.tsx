@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
+import { Copy, Check, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface TabProps {
   id: string;
@@ -104,7 +104,7 @@ const TabsComponent: React.FC<{ tabs: TabProps[] }> = ({ tabs }) => {
 };
 
 const Endpoint: React.FC<EndpointProps> = ({ 
-  id, title, method, path, description, requestParams, requestBody, responseBody, tabs 
+    title, method, path, description, requestParams, requestBody, responseBody, tabs 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   
@@ -1182,7 +1182,7 @@ async function uploadFile() {
             <section id="rate-limiting" className="mb-16">
               <h2 className="text-3xl font-bold mb-6 pb-2 border-b border-gray-700">Rate Limiting</h2>
               <p className="mb-4">
-                The API automatically handles rate limits from Telegram's API using retry mechanisms. 
+                The API automatically handles rate limits from Telegram&apos;s API using retry mechanisms. 
                 When these limits are encountered, requests are automatically retried with increasing delays.
               </p>
               
@@ -1517,7 +1517,7 @@ async function fetchWithRetry(url, options, maxRetries = 5) {
               <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="text-xl font-medium mb-4">Example Code</h3>
                 <p className="text-gray-300 mb-4">
-                  Here's an example React component that uses the Upload and Gallery endpoints:
+                  Here&apos;s an example React component that uses the Upload and Gallery endpoints:
                 </p>
                 <SyntaxHighlighter language="jsx" style={vscDarkPlus} className="rounded-lg">
 {`import React, { useState, useEffect } from 'react';

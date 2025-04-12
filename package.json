@@ -43,6 +43,7 @@
     "@types/node-telegram-bot-api": "^0.64.8",
     "@types/react": "^19.1.1",
     "@types/react-dom": "^19",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@types/sharp": "^0.31.1",
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
