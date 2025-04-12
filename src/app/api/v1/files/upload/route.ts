@@ -131,14 +131,14 @@ export async function POST(request: Request) {
       });
     }
     
-
+    const userId = apiKey;
     const updateDoc: Document = {
           $push: {
             [`galleries.${chatId}`]: { $each: galleryItems }
           },
           $set: { lastUpdated: timestamp }
         };
-    await collection.updateOne({ apiKey }, updateDoc, { upsert: true });
+    await collection.updateOne({ userId }, updateDoc, { upsert: true });
     return NextResponse.json({ message: 'Upload successful', fileIds: fileIds });
   } catch (error) {
     console.error('Error handling upload:', error);
