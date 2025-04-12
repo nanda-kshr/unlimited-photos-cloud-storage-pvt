@@ -269,7 +269,7 @@ const APIDocumentationPage: React.FC = () => {
         id: 'curl-upload',
         label: 'cURL',
         language: 'bash',
-        code: `curl -X POST https://your-domain/api/v1/files/upload \\
+        code: `curl -X POST https://unlimited-photos-cloud-storage.vercel.app/api/v1/files/upload \\
   -F "image=@image1.jpg" \\
   -F "image=@image2.png" \\
   -F "chatId=123456789" \\
@@ -284,7 +284,7 @@ const APIDocumentationPage: React.FC = () => {
         language: 'python',
         code: `import requests
 
-url = "https://your-domain/api/v1/files/upload"
+url = "https://unlimited-photos-cloud-storage.vercel.app/api/v1/files/upload"
 
 # Open files
 files = [
@@ -328,7 +328,7 @@ async function uploadFiles() {
   
   try {
     const response = await axios.post(
-      'https://your-domain/api/v1/files/upload',
+      'https://unlimited-photos-cloud-storage.vercel.app/api/v1/files/upload',
       formData,
       {
         headers: {
@@ -377,7 +377,7 @@ uploadFiles();`
         id: 'curl-retrieve',
         label: 'cURL',
         language: 'bash',
-        code: `curl -X POST https://your-domain/api/v1/files \\
+        code: `curl -X POST https://unlimited-photos-cloud-storage.vercel.app/api/v1/files \\
   -H "Content-Type: application/json" \\
   -d '{
     "fileId": "AAQCABNmbjFjGAQAAgI-CvmMRVoZAAIC",
@@ -393,7 +393,7 @@ uploadFiles();`
         code: `import requests
 import json
 
-url = "https://your-domain/api/v1/files"
+url = "https://unlimited-photos-cloud-storage.vercel.app/api/v1/files"
 
 payload = {
     "fileId": "AAQCABNmbjFjGAQAAgI-CvmMRVoZAAIC",
@@ -416,7 +416,7 @@ print(response.json())`
         code: `const axios = require('axios');
 
 async function retrieveFileUrl() {
-  const url = 'https://your-domain/api/v1/files';
+  const url = 'https://unlimited-photos-cloud-storage.vercel.app/api/v1/files';
   
   const payload = {
     fileId: 'AAQCABNmbjFjGAQAAgI-CvmMRVoZAAIC',
@@ -488,7 +488,7 @@ retrieveFileUrl();`
         id: 'curl-gallery',
         label: 'cURL',
         language: 'bash',
-        code: `curl -X POST https://your-domain/api/v1/inweb/gallery \\
+        code: `curl -X POST https://unlimited-photos-cloud-storage.vercel.app/api/v1/inweb/gallery \\
   -H "Content-Type: application/json" \\
   -d '{
     "apiKey": "your_telegram_bot_api_key",
@@ -505,7 +505,7 @@ retrieveFileUrl();`
         code: `import requests
 import json
 
-url = "https://your-domain/api/v1/inweb/gallery"
+url = "https://unlimited-photos-cloud-storage.vercel.app/api/v1/inweb/gallery"
 
 payload = {
     "apiKey": "your_telegram_bot_api_key",
@@ -529,7 +529,7 @@ print(response.json())`
         code: `const axios = require('axios');
 
 async function retrieveGallery() {
-  const url = 'https://your-domain/api/v1/inweb/gallery';
+  const url = 'https://unlimited-photos-cloud-storage.vercel.app/api/v1/inweb/gallery';
   
   const payload = {
     apiKey: 'your_telegram_bot_api_key',
@@ -594,7 +594,7 @@ retrieveGallery();`
         id: 'curl-web-upload',
         label: 'cURL',
         language: 'bash',
-        code: `curl -X POST https://your-domain/api/v1/inweb/upload \\
+        code: `curl -X POST https://unlimited-photos-cloud-storage.vercel.app/api/v1/inweb/upload \\
   -F "image=@image1.jpg" \\
   -F "image=@image2.png" \\
   -F "chatId=123456789" \\
@@ -607,7 +607,7 @@ retrieveGallery();`
         language: 'python',
         code: `import requests
 
-url = "https://your-domain/api/v1/inweb/upload"
+url = "https://unlimited-photos-cloud-storage.vercel.app/api/v1/inweb/upload"
 
 # Open files
 files = [
@@ -648,7 +648,7 @@ async function webUploadFiles() {
   
   try {
     const response = await axios.post(
-      'https://your-domain/api/v1/inweb/upload',
+      'https://unlimited-photos-cloud-storage.vercel.app/api/v1/inweb/upload',
       formData,
       {
         headers: {
@@ -865,10 +865,10 @@ webUploadFiles();`
                 All API endpoints are relative to the base URL:
               </p>
               <div className="bg-gray-800 p-4 rounded-lg mb-6 font-mono">
-                https://your-domain.com/api/v1
+                https://unlimited-photos-cloud-storage.vercel.app.com/api/v1
               </div>
               <p className="mb-4">
-                Replace <span className="font-mono">your-domain.com</span> with your actual domain name.
+                Replace <span className="font-mono">unlimited-photos-cloud-storage.vercel.app.com</span> with your actual domain name.
               </p>
               <div className="bg-gray-800 p-6 rounded-lg">
                 <h4 className="text-xl font-medium mb-4">API Versioning</h4>
@@ -1139,7 +1139,7 @@ webUploadFiles();`
 {`// Example error handling in JavaScript
 async function uploadFile() {
   try {
-    const response = await fetch('https://your-domain/api/v1/files/upload', {
+    const response = await fetch('https://unlimited-photos-cloud-storage.vercel.app/api/v1/files/upload', {
       method: 'POST',
       body: formData
     });
@@ -1523,7 +1523,7 @@ async function fetchWithRetry(url, options, maxRetries = 5) {
 {`import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'https://your-domain/api/v1';
+const API_BASE_URL = 'https://unlimited-photos-cloud-storage.vercel.app/api/v1';
 
 const FileManager = ({ apiKey, userId, chatId }) => {
   const [files, setFiles] = useState([]);
