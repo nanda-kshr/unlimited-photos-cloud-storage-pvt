@@ -24,7 +24,7 @@ interface UploadedImage {
 }
 
 const isValidImage = (file: File): boolean => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedTypes = ['image/jpeg', 'image/jpg','image/png', 'image/webp', 'image/gif'];
   return allowedTypes.includes(file.type);
 };
 
@@ -58,13 +58,13 @@ export async function POST(request: Request) {
     const mongouri = formData.get('mongouri')?.toString() || config.mongodbDefaultUri;
     const collectionName = formData.get('collection')?.toString() || config.mongodbDefaultCollection;
     const compress = formData.get('compress') === 'true';
+
     if (!files.length || !chatId || !apiKey || !mongouri || !collectionName) {
+      console.log("MISSINGGGGGG..>!")
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
-    if (files.some((file) => !isValidImage(file))) {
-      return NextResponse.json({ message: 'Only images (jpeg, png, webp, gif) are allowed' }, { status: 400 });
-    }
+
 
     const sessionKey = getSessionKey(apiKey, mongouri);
     const session = getSession(sessionKey);
