@@ -27,9 +27,14 @@ export default function Home() {
   const [apiKey, setApiKey] = useState<string>("");
   const [mongouri, setMongoUri] = useState<string>("");
   const [collection, setCollection] = useState<string>("");
+  const [albums, setAlbums] = useState<Array<{albumId:string,name:string}>>([])
+  const [selectedAlbum, setSelectedAlbum] = useState<string>("")
   const [chatId, setChatId] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [keepCompressed, setKeepCompressed] = useState(true);
+  const [directUpload, setDirectUpload] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [overallProgress, setOverallProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,8 +45,28 @@ export default function Home() {
       setCollection(localStorage.getItem("mongocollection") || "");
       setChatId(localStorage.getItem("chatId") || "");
     } 
+    // Placeholder for future logic
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    const fetchAlbums = async () => {
+      try {
+        const res = await fetch('/api/v1/inweb/gallery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey, userId: apiKey, mongouri: mongouri || '', collectionName: collection || '' })
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setAlbums((data && data.albums) || []);
+      } catch (e) {
+        // ignore
+      }
+    }
+    fetchAlbums();
+  }, [apiKey, mongouri, collection]);
 
   const Router = useRouter();
 
@@ -71,47 +96,169 @@ export default function Home() {
       return;
     }
 
+    const results: any[] = [];
     try {
-      // Upload files sequentially
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('image', file);
-        formData.append('chatId', chatId.toString());
-        formData.append('key', apiKey.toString());
-        formData.append('mongouri', mongouri.toString());
-        formData.append('collection', collection.toString());
-        formData.append('compress', keepCompressed.toString());
+      if (directUpload) {
+        // Attempt direct browser -> Telegram upload
+        for (const file of files) {
+          // send original as document
+          const docForm = new FormData();
+          docForm.append('chat_id', chatId.toString());
+          docForm.append('document', file, file.name);
 
-        const response = await fetch('/api/v1/inweb/upload', {
-          method: 'POST',
-          body: formData,
-        });
+          // Use XHR to get upload progress
+          const sendDocJson = await uploadWithProgress(`https://api.telegram.org/bot${apiKey}/sendDocument`, docForm, (p) => {
+            setUploadProgress(prev => {
+              const next = { ...prev, [file.name]: p };
+              const vals = Object.values(next);
+              const avg = Math.round(vals.reduce((a, b) => a + b, 0) / (vals.length || 1));
+              setOverallProgress(avg);
+              return next;
+            });
+          });
+          const messageId = sendDocJson.result?.message_id;
+          const fileId = sendDocJson.result?.document?.file_id;
+          let placeholderFileId: string | undefined;
 
-        if (response.status === 429) {
-          setError('Too many uploads');
-          throw new Error('Too many uploads');
+          if (keepCompressed && file.type.startsWith('image/')) {
+            // create compressed placeholder using canvas
+            const compressedBlob = await (async () => {
+              try {
+                const bitmap = await createImageBitmap(file);
+                const scale = 0.4;
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(bitmap.width * scale);
+                canvas.height = Math.round(bitmap.height * scale);
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return null;
+                ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.6));
+              } catch (err) {
+                return null;
+              }
+            })();
+
+            if (compressedBlob) {
+              const photoForm = new FormData();
+              photoForm.append('chat_id', chatId.toString());
+              photoForm.append('photo', compressedBlob, 'placeholder.jpg');
+                try {
+                  const photoJson = await uploadWithProgress(`https://api.telegram.org/bot${apiKey}/sendPhoto`, photoForm, (p) => {
+                    setUploadProgress(prev => {
+                      const next = { ...prev, [file.name + '-thumb']: p };
+                      const vals = Object.values(next);
+                      const avg = Math.round(vals.reduce((a, b) => a + b, 0) / (vals.length || 1));
+                      setOverallProgress(avg);
+                      return next;
+                    });
+                  });
+                  placeholderFileId = photoJson.result?.photo?.[photoJson.result.photo.length - 1]?.file_id;
+                } catch (e) {
+                  // ignore placeholder failure
+                }
+            }
+          }
+
+          // register metadata in server DB
+          const registerBody = {
+            apiKey,
+            userId: apiKey,
+            chatId,
+            fileId,
+            messageId,
+            placeholderFileId,
+            mongouri: mongouri || undefined,
+            collectionName: collection || undefined,
+            albumId: selectedAlbum || undefined,
+          };
+
+          const regRes = await fetch('/api/v1/inweb/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(registerBody),
+          });
+
+          if (!regRes.ok) {
+            console.warn('Registration failed for', file.name, await regRes.text().catch(() => ''));
+          }
+          results.push({ name: file.name, success: true, fileId, messageId });
         }
 
-        if (!response.ok) {
-          throw new Error(`Upload failed for ${file.name}: ${response.statusText}`);
+        setShowSuccess(true);
+        setFiles([]);
+        setTimeout(() => setShowSuccess(false), 5000);
+      } else {
+        // Server-mediated upload (existing flow) using XHR to track progress
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append('image', file);
+          formData.append('chatId', chatId.toString());
+          formData.append('key', apiKey.toString());
+          formData.append('mongouri', mongouri.toString());
+          formData.append('collection', collection.toString());
+          formData.append('compress', keepCompressed.toString());
+
+          formData.append('albumId', selectedAlbum || '')
+          const responseJson = await uploadWithProgress('/api/v1/inweb/upload', formData, (p) => {
+            setUploadProgress(prev => {
+              const next = { ...prev, [file.name]: p };
+              const vals = Object.values(next);
+              const avg = Math.round(vals.reduce((a, b) => a + b, 0) / (vals.length || 1));
+              setOverallProgress(avg);
+              return next;
+            });
+          });
+          // response may contain imageInfo array
+          results.push({ name: file.name, success: true, response: responseJson });
         }
 
-        await response.json();
+        setShowSuccess(true);
+        setFiles([]);
+        setTimeout(() => setShowSuccess(false), 5000);
       }
-
-      setShowSuccess(true);
-      setFiles([]); 
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 5000);
     } catch (error) {
-      
       console.error('Upload failed:', error);
-      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const isCors = (error instanceof TypeError);
+      if (isCors) {
+        alert('Direct browser upload failed (likely CORS). Use server upload or deploy a proxy.');
+      } else {
+        alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
+      setOverallProgress(0);
+      setUploadProgress({});
+      console.log('per-file results:', results);
     }
   }
+
+  // helper to upload with progress using XHR
+  const uploadWithProgress = (url: string, body: FormData, onProgress: (p: number) => void) => {
+    return new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.withCredentials = false;
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent);
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (e) {
+            resolve(xhr.responseText);
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(body);
+    });
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -161,6 +308,24 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
+                {files.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {files.map((file) => {
+                      const p = uploadProgress[file.name] ?? 0;
+                      return (
+                        <div key={file.name} className="w-full">
+                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <span className="truncate max-w-xs">{file.name}</span>
+                            <span>{p}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-2 bg-blue-500" style={{ width: `${p}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-center text-gray-500">
@@ -213,6 +378,13 @@ export default function Home() {
             value={chatId}
             onChange={(e) => handleChatId(e)}
           />
+          <div className="mb-4">
+            <Label>Upload to Album</Label>
+            <select className="w-full p-2 border rounded" value={selectedAlbum} onChange={(e)=>setSelectedAlbum(e.target.value)}>
+              <option value="">(none)</option>
+              {albums.map(a=> <option key={a.albumId} value={a.albumId}>{a.name || a.albumId}</option>)}
+            </select>
+          </div>
           <label className="inline-flex items-center cursor-pointer">
             <Input 
               type="checkbox" 
@@ -223,6 +395,18 @@ export default function Home() {
             />
             <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
             <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Need Thumbnail Optimization?</span>
+          </label>
+
+          <label className="inline-flex items-center cursor-pointer">
+            <Input
+              type="checkbox"
+              value=""
+              className="sr-only peer"
+              onChange={(e) => setDirectUpload(e.target.checked)}
+              checked={directUpload}
+            />
+            <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+            <div className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Upload directly from browser (insecure, may be blocked by CORS)</div>
           </label>
           <Button
             className="w-full mt-6"
@@ -250,6 +434,12 @@ export default function Home() {
               <>Upload to Telegram</>
             )}
           </Button>
+          <div className="mt-4">
+            <div className="text-sm text-gray-600 mb-1">Overall: {overallProgress}%</div>
+            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-green-500" style={{ width: `${overallProgress}%` }} />
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

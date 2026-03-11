@@ -5,5 +5,5 @@ export const config = {
     maxPoolSize: parseInt(process.env.MAX_POOL_SIZE || '10', 10),
     minPoolSize: parseInt(process.env.MIN_POOL_SIZE || '2', 10),
     sessionTimeoutMs: parseInt(process.env.SESSION_TIMEOUT_MS || '86400000', 10), // 24 hours
-    telegramApiTokenEnv: process.env.BOT_TOKEN || '',
+    // Bot token fallback removed: client must supply the Telegram bot token via the UI
   };

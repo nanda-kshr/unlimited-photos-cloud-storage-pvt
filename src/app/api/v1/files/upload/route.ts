@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     }
 
     const collection = getCollection(client, collectionName);
-    const bot = createBot(apiKey || config.telegramApiTokenEnv);
+    const bot = createBot(apiKey);
     const timestamp = new Date();
     const uploadedImages: UploadedImage[] = [];
     const galleryItems: GalleryItem[] = [];

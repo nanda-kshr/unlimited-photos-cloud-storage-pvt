@@ -11,6 +11,7 @@ interface GalleryItem {
   fileId: string;
   uploadedAt: Date | string;
   placeholder?: string; // Added optional placeholder field
+  deleted?: boolean;
 }
 
 interface EnhancedGalleryItem {
@@ -72,14 +73,16 @@ export async function POST(request: Request) {
     let galleryData: { [chatId: string]: GalleryItem[] } = {};
 
     if (chatId && userGallery.galleries[chatId]) {
-      const sortedItems = (userGallery.galleries[chatId] as GalleryItem[]).sort(
+      const filtered = (userGallery.galleries[chatId] as GalleryItem[]).filter(item => !item.deleted);
+      const sortedItems = filtered.sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       galleryData = { [chatId]: sortedItems };
     } else {
       Object.entries(userGallery.galleries).forEach(([id, images]) => {
         if (Array.isArray(images)) {
-          galleryData[id] = (images as GalleryItem[]).sort(
+          const filtered = (images as GalleryItem[]).filter(item => !item.deleted);
+          galleryData[id] = filtered.sort(
             (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
           );
         } else {
@@ -89,6 +92,18 @@ export async function POST(request: Request) {
     }
 
     const enhancedGalleryData: GalleryData = {};
+    // collect albums from dedicated albums collection and their linked images via album_links
+    const db = (collection as any).s?.db || (collection as any).db || ((collection as any).client ? (collection as any).client.db() : undefined);
+    const albumsColl = db.collection('albums');
+    const linksColl = db.collection('album_links');
+
+    const albumsRaw = await albumsColl.find({ userId }).toArray();
+    const albums = [] as any[];
+    for (const a of albumsRaw) {
+      const links = await linksColl.find({ albumId: a._id }).toArray();
+      const images = links.map((l: any) => l.messageId);
+      albums.push({ albumId: a.albumId, name: a.name, images, createdAt: a.createdAt, _id: a._id });
+    }
 
     for (const [chatId, images] of Object.entries(galleryData)) {
       enhancedGalleryData[chatId] = await Promise.all(
@@ -149,6 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       userId,
       galleryData: enhancedGalleryData,
+      albums,
       totalChats,
       totalImages,
     });

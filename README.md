@@ -12,7 +12,6 @@ Hosted Website - [UnlimCloud](https://unlimited-photos-cloud-storage.vercel.app)
 To configure the application, you need to set up a `.env` file with the following values:
 
 ```
-BOT_TOKEN=BOT_TOKEN
 MONGODB_URI=MONGO-URI
 MONGODB_COLLECTION=MONGO_COLLECTION
 CHAT_ID=TELEGRAM_CHAT_ID

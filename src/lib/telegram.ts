@@ -7,7 +7,15 @@ interface CustomTelegramBot {
 }
 
 export const createBot = (token: string): CustomTelegramBot => {
-  const bot = new TelegramBot(token, { polling: false });
+  // Increase request timeout to accommodate larger uploads where possible.
+  // node-telegram-bot-api accepts `request` options which are forwarded to the HTTP client.
+  // cast options as any to avoid type mismatch in @types
+  const bot = new TelegramBot(token, { polling: false } as any);
+  try {
+    ;(bot as any).options = { ...(bot as any).options, request: { timeout: 300000 } };
+  } catch (e) {
+    // ignore
+  }
   return {
     sendDocument: (chatId: string, buffer: Buffer) =>
       bot.sendDocument(chatId, buffer),

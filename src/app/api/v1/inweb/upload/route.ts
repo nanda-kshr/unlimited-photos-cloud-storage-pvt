@@ -13,6 +13,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const files = formData.getAll('image') as File[];
+    const MAX_UPLOAD_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || '20971520', 10); // 20 MB default
     const chatId = formData.get('chatId') as string;
     const userId = formData.get('key') as string;
     const mongouri = formData.get('mongouri') as string || "";
@@ -28,11 +29,19 @@ export async function POST(request: Request) {
     }
 
     const bot = createBot(userId);
-    const timestamp = new Date();
+    const albumId = formData.get('albumId') as string || "";
+
+    const database = (collection as any).s?.db || (collection as any).db || ((collection as any).client ? (collection as any).client.db() : undefined);
+    const albumsColl = database.collection('albums');
+    const linksColl = database.collection('album_links');
     const uploadedImages: unknown[] = [];
     const galleryItems: unknown[] = [];
 
     for (const [index, file] of files.entries()) {
+      // Guard: reject very large files early with a helpful message.
+      if (typeof (file as any).size === 'number' && (file as any).size > MAX_UPLOAD_BYTES) {
+        return NextResponse.json({ message: `File too large. Max allowed: ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB` }, { status: 413 });
+      }
       // Add 1-second delay before each upload, except the first one
       if (index > 0) {
         await delay(1000); // Wait 1 second
@@ -64,35 +73,54 @@ export async function POST(request: Request) {
         placeholderFileId = placeholderChatDetails.photo?.[placeholderChatDetails.photo.length - 1]?.file_id || "";
       }
 
+      const fileTimestamp = new Date();
       const galleryItem = {
         messageId: originalMessageId,
-        timestamp,
+        timestamp: fileTimestamp,
         fileId: originalFileId,
-        uploadedAt: timestamp,
+        uploadedAt: fileTimestamp,
         ...(compress && placeholderFileId && { placeholder: placeholderFileId })
       };
-      galleryItems.push(galleryItem);
 
       uploadedImages.push({
         messageId: originalMessageId,
         chatId,
-        timestamp: timestamp.toISOString(),
+        timestamp: fileTimestamp.toISOString(),
         ...(compress && placeholderFileId && { placeholder: placeholderFileId })
       });
+
+      // Persist this file immediately so earlier successes are not lost on later failures
+      try {
+        await collection.updateOne(
+          { userId },
+          {
+            $push: { [`galleries.${chatId}`]: galleryItem },
+            $set: { lastUpdated: fileTimestamp }
+          },
+          { upsert: true }
+        );
+        // If albumId was provided, link this messageId to that album (if album exists)
+        if (albumId) {
+          try {
+            const targetAlbum = await albumsColl.findOne({ userId, albumId });
+            if (targetAlbum) {
+              await linksColl.updateOne(
+                { albumId: targetAlbum._id, messageId: originalMessageId },
+                { $setOnInsert: { albumId: targetAlbum._id, messageId: originalMessageId, fileId: originalFileId, chatId, userId, createdAt: fileTimestamp } },
+                { upsert: true }
+              );
+            }
+          } catch (e) {
+            console.error('Error linking uploaded image to album:', e);
+          }
+        }
+      } catch (dbErr) {
+        console.error('Failed to save gallery item to DB for file:', originalFileId, dbErr);
+        // continue — we don't want a DB failure to block remaining uploads
+      }
     }
 
-    const updateDoc: Document = {
-      $push: {
-        [`galleries.${chatId}`]: { $each: galleryItems }
-      },
-      $set: { lastUpdated: timestamp }
-    };
-
-    await collection.updateOne(
-      { userId },
-      updateDoc,
-      { upsert: true }
-    );
+    // galleryItems already persisted per-file above; no final batched update needed.
 
     client.close();
     return NextResponse.json({ 
@@ -101,10 +129,16 @@ export async function POST(request: Request) {
     });
   } catch (error: unknown) {
     console.error('Error handling upload:', error);
-    if (error instanceof Error && error.message.includes('429')) {
+    const message = error instanceof Error ? error.message : '';
+    // Handle common network/socket errors with clearer response
+    if (message.includes('429')) {
       return NextResponse.json({ message: 'Too many uploads, please try again later' }, { status: 429 });
     }
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (message.includes('socket hang up') || message.includes('EFATAL')) {
+      return NextResponse.json({ message: 'Network error uploading to Telegram (socket hang up). Try a smaller file or use direct browser upload/proxy.', error: message }, { status: 502 });
+    }
+
+    const errorMessage = message || 'Unknown error';
     return NextResponse.json({ message: 'Upload failed', error: errorMessage }, { status: 500 });
   }
 }
