@@ -1,9 +1,9 @@
 //api/v1/inweb/upload/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextResponse } from 'next/server'
 import {createBot} from '@/lib/telegram'
 import handler from '../../_connect/route';
-import { Document } from 'mongodb';
 import sharp from 'sharp';
 
 // Utility function to wait for a specified time
@@ -35,7 +35,6 @@ export async function POST(request: Request) {
     const albumsColl = database.collection('albums');
     const linksColl = database.collection('album_links');
     const uploadedImages: unknown[] = [];
-    const galleryItems: unknown[] = [];
 
     for (const [index, file] of files.entries()) {
       // Guard: reject very large files early with a helpful message.

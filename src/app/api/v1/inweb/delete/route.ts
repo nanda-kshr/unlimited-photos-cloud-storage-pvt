@@ -30,7 +30,6 @@ export async function POST(request: Request) {
 
     // Soft-delete by setting `deleted: true` on the matching array element.
     const arrayFilter = fileId ? { 'elem.fileId': fileId } : { 'elem.messageId': messageId };
-    const arrayFilterKey = fileId ? 'elem.fileId' : 'elem.messageId';
 
     const updateResult = await collection.updateOne(
       { userId: user },

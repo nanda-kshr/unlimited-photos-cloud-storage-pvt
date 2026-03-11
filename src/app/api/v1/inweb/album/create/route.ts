@@ -1,11 +1,16 @@
 // api/v1/inweb/album/create/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import handler from '@/app/api/v1/_connect/route';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { apiKey, userId, name, mongouri, collectionName } = body;
+    const body = (await request.json()) as Record<string, unknown>;
+    const apiKey = typeof body.apiKey === 'string' ? body.apiKey : undefined;
+    const userId = typeof body.userId === 'string' ? body.userId : undefined;
+    const name = typeof body.name === 'string' ? body.name : undefined;
+    const mongouri = typeof body.mongouri === 'string' ? body.mongouri : undefined;
+    const collectionName = typeof body.collectionName === 'string' ? body.collectionName : undefined;
     if (!apiKey) return NextResponse.json({ message: 'apiKey required' }, { status: 400 });
     if (!name) return NextResponse.json({ message: 'name required' }, { status: 400 });
 
@@ -19,7 +24,7 @@ export async function POST(request: Request) {
     const albumDoc = { userId: user, albumId, name, createdAt: new Date() };
 
     try {
-      const db = (collection as any).s?.db || (collection as any).db || ((collection as any).client ? (collection as any).client.db() : undefined);
+      const db = (collection as unknown as any).s?.db || (collection as unknown as any).db || ((collection as unknown as any).client ? (collection as unknown as any).client.db() : undefined);
       const albumsColl = db.collection('albums');
       const res = await albumsColl.insertOne(albumDoc);
       client.close();

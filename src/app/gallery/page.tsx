@@ -46,9 +46,9 @@ export default function Gallery() {
           }),
         })
         if (!res.ok) throw new Error(await res.text())
-        const data = await res.json()
-        setAlbums((data as any).albums || [])
-        setTotalImages((data && data.totalImages) || 0)
+        const data = await res.json() as { albums?: Album[]; totalImages?: number }
+        setAlbums(data.albums || [])
+        setTotalImages(data.totalImages || 0)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error')
       } finally {

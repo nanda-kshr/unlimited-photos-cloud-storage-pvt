@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react"
+import type { TelegramMessageResponse, TelegramDocumentResult, TelegramPhotoResult } from '@/types/telegram'
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -62,8 +63,8 @@ export default function Home() {
         const data = await res.json();
         setAlbums((data && data.albums) || []);
       } catch (e) {
-        // ignore
-      }
+          void e
+        }
     }
     fetchAlbums();
   }, [apiKey, mongouri, collection]);
@@ -96,7 +97,7 @@ export default function Home() {
       return;
     }
 
-    const results: any[] = [];
+    const results: Array<Record<string, unknown>> = [];
     try {
       if (directUpload) {
         // Attempt direct browser -> Telegram upload
@@ -107,7 +108,7 @@ export default function Home() {
           docForm.append('document', file, file.name);
 
           // Use XHR to get upload progress
-          const sendDocJson = await uploadWithProgress(`https://api.telegram.org/bot${apiKey}/sendDocument`, docForm, (p) => {
+          const sendDocJson = await uploadWithProgress<TelegramMessageResponse<TelegramDocumentResult>>(`https://api.telegram.org/bot${apiKey}/sendDocument`, docForm, (p) => {
             setUploadProgress(prev => {
               const next = { ...prev, [file.name]: p };
               const vals = Object.values(next);
@@ -134,8 +135,10 @@ export default function Home() {
                 ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
                 return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.6));
               } catch (err) {
-                return null;
-              }
+                  void err
+                  console.warn('Compression failed for', file.name, err instanceof Error ? err.message : err);
+                  return null;
+                }
             })();
 
             if (compressedBlob) {
@@ -143,7 +146,7 @@ export default function Home() {
               photoForm.append('chat_id', chatId.toString());
               photoForm.append('photo', compressedBlob, 'placeholder.jpg');
                 try {
-                  const photoJson = await uploadWithProgress(`https://api.telegram.org/bot${apiKey}/sendPhoto`, photoForm, (p) => {
+                  const photoJson = await uploadWithProgress<TelegramMessageResponse<TelegramPhotoResult>>(`https://api.telegram.org/bot${apiKey}/sendPhoto`, photoForm, (p) => {
                     setUploadProgress(prev => {
                       const next = { ...prev, [file.name + '-thumb']: p };
                       const vals = Object.values(next);
@@ -154,8 +157,9 @@ export default function Home() {
                   });
                   placeholderFileId = photoJson.result?.photo?.[photoJson.result.photo.length - 1]?.file_id;
                 } catch (e) {
-                  // ignore placeholder failure
+                  console.warn('Placeholder upload failed for', file.name, e instanceof Error ? e.message : e);
                 }
+                  
             }
           }
 
@@ -218,6 +222,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Upload failed:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error during upload');
       const isCors = (error instanceof TypeError);
       if (isCors) {
         alert('Direct browser upload failed (likely CORS). Use server upload or deploy a proxy.');
@@ -233,8 +238,8 @@ export default function Home() {
   }
 
   // helper to upload with progress using XHR
-  const uploadWithProgress = (url: string, body: FormData, onProgress: (p: number) => void) => {
-    return new Promise<any>((resolve, reject) => {
+  const uploadWithProgress = <T = unknown>(url: string, body: FormData, onProgress: (p: number) => void): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url);
       xhr.withCredentials = false;
@@ -247,9 +252,10 @@ export default function Home() {
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            resolve(JSON.parse(xhr.responseText));
+            resolve(JSON.parse(xhr.responseText) as unknown as T);
           } catch (e) {
-            resolve(xhr.responseText);
+            console.warn(e);
+            resolve(xhr.responseText as unknown as T);
           }
         } else {
           reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));

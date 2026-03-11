@@ -1,4 +1,5 @@
 // api/v1/inweb/album/modify/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import handler from '@/app/api/v1/_connect/route';
 
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       const ids: number[] = [];
       if (Array.isArray(messageId)) ids.push(...messageId);
       else if (typeof messageId === 'number') ids.push(messageId);
-      else if (Array.isArray((body as any).messageIds)) ids.push(...(body as any).messageIds);
+      else if (Array.isArray(body.messageIds)) ids.push(...(body.messageIds as number[]));
       if (ids.length === 0 && !fileId) return NextResponse.json({ message: 'messageId(s) or fileId required to add' }, { status: 400 });
 
       if (ids.length > 0) {
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
       const ids: number[] = [];
       if (Array.isArray(messageId)) ids.push(...messageId);
       else if (typeof messageId === 'number') ids.push(messageId);
-      else if (Array.isArray((body as any).messageIds)) ids.push(...(body as any).messageIds);
+      else if (Array.isArray(body.messageIds)) ids.push(...(body.messageIds as number[]));
       if (ids.length > 0) {
         await linksColl.deleteMany({ albumId: albumDoc._id, messageId: { $in: ids } });
         client.close();

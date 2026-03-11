@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import TelegramBot from 'node-telegram-bot-api';
 
 interface CustomTelegramBot {
@@ -12,9 +13,9 @@ export const createBot = (token: string): CustomTelegramBot => {
   // cast options as any to avoid type mismatch in @types
   const bot = new TelegramBot(token, { polling: false } as any);
   try {
-    ;(bot as any).options = { ...(bot as any).options, request: { timeout: 300000 } };
+    ;(bot as unknown as any).options = { ...(bot as unknown as any).options, request: { timeout: 300000 } };
   } catch (e) {
-    // ignore
+    console.warn('Failed to set request timeout on Telegram Bot. Large uploads may fail if the default timeout is too low.', e instanceof Error ? e.message : e);
   }
   return {
     sendDocument: (chatId: string, buffer: Buffer) =>

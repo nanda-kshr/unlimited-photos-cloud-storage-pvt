@@ -1,7 +1,8 @@
 // api/v1/inweb/register/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import handler from '../../_connect/route';
-import { ObjectId } from 'mongodb';
+
 
 interface RegisterRequest {
   apiKey: string;
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     const timestamp = new Date();
     const user = userId || apiKey;
 
-    const galleryItem: any = {
+    const galleryItem: Record<string, unknown> = {
       messageId,
       timestamp,
       fileId,
@@ -56,9 +57,7 @@ export async function POST(request: Request) {
 
     // Ensure default 'All' album exists in `albums` collection and link this messageId in `album_links`.
     try {
-      const db = (collection as any).s.db || (collection as any).db || (collection as any).collection?.db?.();
-      // fallback: use client.db() if available
-      const database = (collection as any).s?.db || (collection as any).db || ((collection as any).client ? (collection as any).client.db() : undefined);
+      const database = (collection as unknown as any).s?.db || (collection as unknown as any).db || ((collection as unknown as any).client ? (collection as unknown as any).client.db() : undefined);
       const albumsColl = database.collection('albums');
       const linksColl = database.collection('album_links');
 

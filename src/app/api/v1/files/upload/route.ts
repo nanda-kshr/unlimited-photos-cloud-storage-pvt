@@ -23,11 +23,6 @@ interface UploadedImage {
   placeholder?: string;
 }
 
-const isValidImage = (file: File): boolean => {
-  const allowedTypes = ['image/jpeg', 'image/jpg','image/png', 'image/webp', 'image/gif'];
-  return allowedTypes.includes(file.type);
-};
-
 const retryOnRateLimit = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
@@ -48,7 +43,6 @@ const retryOnRateLimit = async <T>(
 };
 
 const getSessionKey = (apiKey: string, mongouri: string) => `${apiKey}:${mongouri}`;
-console.log(getSessionKey)
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();

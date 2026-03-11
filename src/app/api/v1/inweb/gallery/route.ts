@@ -1,4 +1,5 @@
 //api/v1/inweb/gallery/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextResponse } from 'next/server';
 import handler from '../../_connect/route';
@@ -30,9 +31,13 @@ interface GalleryData {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { apiKey, userId, chatId, mongouri, collectionName } = body;
-    const bot = createBot(apiKey);
+    const body = (await request.json()) as Record<string, unknown>;
+    const apiKey = typeof body.apiKey === 'string' ? body.apiKey : undefined;
+    const userId = typeof body.userId === 'string' ? body.userId : undefined;
+    const chatId = typeof body.chatId === 'string' ? body.chatId : undefined;
+    const mongouri = typeof body.mongouri === 'string' ? body.mongouri : undefined;
+    const collectionName = typeof body.collectionName === 'string' ? body.collectionName : undefined;
+    const bot = createBot(apiKey ||  "");
     const mongoUri = mongouri || process.env.MONGODB_URI;
     const collectionNm = collectionName || process.env.MONGODB_COLLECTION;
 
@@ -93,16 +98,16 @@ export async function POST(request: Request) {
 
     const enhancedGalleryData: GalleryData = {};
     // collect albums from dedicated albums collection and their linked images via album_links
-    const db = (collection as any).s?.db || (collection as any).db || ((collection as any).client ? (collection as any).client.db() : undefined);
+    const db = (collection as unknown as any).s?.db || (collection as unknown as any).db || ((collection as unknown as any).client ? (collection as unknown as any).client.db() : undefined);
     const albumsColl = db.collection('albums');
     const linksColl = db.collection('album_links');
 
     const albumsRaw = await albumsColl.find({ userId }).toArray();
-    const albums = [] as any[];
+    const albums: Array<{ albumId: string; name?: string; images: number[]; createdAt?: Date; _id?: unknown }> = [];
     for (const a of albumsRaw) {
-      const links = await linksColl.find({ albumId: a._id }).toArray();
-      const images = links.map((l: any) => l.messageId);
-      albums.push({ albumId: a.albumId, name: a.name, images, createdAt: a.createdAt, _id: a._id });
+      const links = await linksColl.find({ albumId: (a as any)._id }).toArray();
+      const images = links.map((l: unknown) => ((l as Record<string, unknown>).messageId as number));
+      albums.push({ albumId: (a as Record<string, unknown>).albumId as string, name: (a as Record<string, unknown>).name as string | undefined, images, createdAt: (a as Record<string, unknown>).createdAt as Date | undefined, _id: (a as Record<string, unknown>)._id });
     }
 
     for (const [chatId, images] of Object.entries(galleryData)) {
